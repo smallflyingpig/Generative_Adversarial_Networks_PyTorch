@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import numpy as np
 
 from torch.autograd import Variable
-from GAN import Discriminator, Generator
+import GAN
 
 
 def load_dataset(batch_size=10, download=True):
@@ -19,13 +19,13 @@ def load_dataset(batch_size=10, download=True):
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5),
                                                          (0.5, 0.5, 0.5))])
-    trainset = torchvision.datasets.MNIST(root='../data', train=True,
+    trainset = torchvision.datasets.MNIST(root='../data/mnist', train=True,
                                           download=download,
                                           transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                               shuffle=True, num_workers=2)
 
-    testset = torchvision.datasets.MNIST(root='../data', train=False,
+    testset = torchvision.datasets.MNIST(root='../data/mnist', train=False,
                                          download=download,
                                          transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
@@ -52,6 +52,7 @@ def train_GAN(Dis_model, Gen_model, D_criterion, G_criterion, D_optimizer,
 
         for i, data in enumerate(trainloader, 0):
             # get the inputs from true distribution
+            batch_size = data[0].size(0)
             true_inputs, _ = data
             true_inputs = true_inputs.view(-1, 1 * 28 * 28)
             if use_gpu:
@@ -98,6 +99,7 @@ def train_GAN(Dis_model, Gen_model, D_criterion, G_criterion, D_optimizer,
                        G_running_loss / print_every))
                 D_running_loss = 0.0
                 G_running_loss = 0.0
+                torchvision.utils.save_image(fake_inputs.view(-1,1,28,28).data.cpu(), filename="./GAN/sample/sample_{}.png".format((i+1)/print_every), nrow=8)
 
             if update_max and i > update_max:
                 break
@@ -105,14 +107,14 @@ def train_GAN(Dis_model, Gen_model, D_criterion, G_criterion, D_optimizer,
     print('Finished Training')
 
 
-def run_GAN(n_epoch=2, batch_size=50, use_gpu=False, dis_lr=1e-4, gen_lr=1e-3,
+def run_GAN(n_epoch=10, batch_size=64, use_gpu=False, dis_lr=1e-4, gen_lr=1e-3,
             n_update_dis=1, n_update_gen=1, update_max=None):
     # loading data
     trainloader, testloader = load_dataset(batch_size=batch_size)
 
     # initialize models
-    Dis_model = Discriminator()
-    Gen_model = Generator()
+    Dis_model = GAN.Discriminator()
+    Gen_model = GAN.Generator()
 
     if use_gpu:
         Dis_model = Dis_model.cuda()
